@@ -41,7 +41,8 @@ tlab2 192.168.10.11
 >
 > Disable ETRN and VRFY commands. Remember to reload postfix service /etc/init.d/postfix every time you edit main.cf.
 
-- 2.0.1 Installing postfix, procmail, spamassassin
+- **2.0.1 Installing postfix, procmail, spamassassin**
+  
     **Solution**
     ```bash
     sudo apt-get update
@@ -49,8 +50,16 @@ tlab2 192.168.10.11
     sudo apt-get install procmial -y
     sudo apt-get install spamassassin spamc -y
     ```
-    **Note:** Upon installing postfix, the installation wizard
-- 2.1 Configure the postfix configuration file main.cf to fill the requirements above. 1p  
+    **Note:** Upon installing postfix, the installation wizard will prompt some configuration options.  
+    1. General mail configuration type: Internet with smarthost
+    2. System mail: `tlab1`; (This will form the email address: `username@tlab1`)
+    3. SMTP relay host: default
+   
+    If you want to change some of these configurations later, the following command can be used:
+    ```shell
+    sudo dpkg-reconfigure postfix
+    ```
+- **2.1 Configure the postfix configuration file main.cf to fill the requirements above. 1p** 
   
     **Solution**
 
