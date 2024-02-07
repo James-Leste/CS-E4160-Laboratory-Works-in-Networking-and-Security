@@ -12,10 +12,10 @@ tlab2 192.168.10.11
 > During this assignment you will need two hosts (`lab1` and `lab2`). Configure them in the same network, such that they can communicate to each other for mail delivery.
 
 
-- 1.1 Add the IPv4 addresses and aliases of lab1 and lab2 on both computers to the **/etc/hosts** file.
+- **1.1 Add the IPv4 addresses and aliases of lab1 and lab2 on both computers to the /etc/hosts file.**  
 
     **Solution**
-    Edit /etc/hosts fot tlab1 & tlab2   
+    Edit `/etc/hosts` fot `tlab1` & `tlab2`   
     syntax: `[ip address] [alias]`
     ```/etc/hosts
     192.168.10.10 tlab1
