@@ -1,39 +1,40 @@
 # A2 Email Server
 
 2 Ubuntu VMs:
+
 ```/etc/hosts
 tlab1 192.168.10.10
 tlab2 192.168.10.11
 ```
 
-
 ## 1. Preparation
 
 > During this assignment you will need two hosts (`lab1` and `lab2`). Configure them in the same network, such that they can communicate to each other for mail delivery.
 
-
 - **1.1 Add the IPv4 addresses and aliases of lab1 and lab2 on both computers to the /etc/hosts file.**  
 
     **Solution**
-    Edit `/etc/hosts` fot `tlab1` & `tlab2`   
+    Edit `/etc/hosts` fot `tlab1` & `tlab2`  
     syntax: `[ip address] [alias]`
+
     ```/etc/hosts
     192.168.10.10 tlab1
     192.168.10.11 tlab2
     ```
+
     Use `ping tlab1` and `ping tlab2` to test if the aliases can be resolve to correct ip addresses.
 
 ## 2. Installing software and Configuring postfix and exim4
 
 > As a first step, install all the software that will be used in the assignment. Verify that the following packages are installed:
-> 
+>
 > **lab1:** postfix, procmail, spamassassin  
 > **lab2:** exim4
 >
 > **Postfix** is the MTA used on lab1 for delivering the mail. **Exim4** is the MTA used on lab2. **Procmail** is used as the MDA on lab1. **Spamassassin**, as the name suggests, is a tool used for spam detection.
 >
 > Installing **mailutils** on lab1 can help with handling incoming mail. Then, you should configure postfix to deliver mail from lab2 to lab1.
-> 
+>
 > **Edit main configuration file for postfix (main.cf, postconf(5)) on lab1.** You must change, at least, the following fields:
 >
 > - myhostname (from `/etc/hosts`)
@@ -47,37 +48,45 @@ tlab2 192.168.10.11
 - **2.0.1 Installing postfix, procmail, spamassassin on tlab1**
   
     **Solution**
+
     ```shell
     sudo apt-get update
     sudo apt-get install postfix -y
     sudo apt-get install procmial -y
     sudo apt-get install spamassassin spamc -y
     ```
+
     **Note:** Upon installing postfix, the installation wizard will prompt some configuration options.  
     1. General mail configuration type: Internet with smarthost
     2. System mail: `tlab1`; (This will form the email address: `username@tlab1`)
     3. SMTP relay host: default
-   
+
     If you want to change some of these configurations later, the following command can be used:
+
     ```shell
     sudo dpkg-reconfigure postfix
     ```
+
 - **2.0.2 Installing exim4 on tlab2**
   
     **Solution**
+
     ```shell
     sudo apt-get update
     sudo apt-get install exim4 -y
     ```
+
     **Note:** Differently, during installation exim4 won't prompt any windows for configuration. exim4 can be configured later using:
+
     ```shell
     sudo dpkg-reconfigure exim4-config
     ```
 
-- **2.1 Configure the postfix configuration file `main.cf` to fill the requirements above. 1p** 
+- **2.1 Configure the postfix configuration file `main.cf` to fill the requirements above. 1p**
   
     **Solution**  
     edit **/etc/postfix/main.cf**, change following configurations
+
     ```main.cf
     myhostname: tlab1
     mydestination: $myhostname, tlab1, localhost.localdomain, localhost
@@ -86,28 +95,58 @@ tlab2 192.168.10.11
     smtpd_discard_ehlo_keywords = etrn
     disable_vrfy_command = yes
     ```
+
 - **2.2 What is purpose of the `main.cf` setting "mydestination"? 1p**  
     **Solution**
+
+    **- mydestination**
+    The mydestination parameter specifies what domains this machine will deliver locally, instead of forwarding to another machine.
+
+    **- mydomain (default: see "postconf -d" output)**
+    The internet domain name of this mail system. The default is to use `$myhostname` minus the first component, or "localdomain" (Postfix 2.3 and later). `$mydomain` is used as a default value for many other configuration parameters.
+    Example:
+
+    ```shell
+    mydomain = domain.tld
     ```
-    Hi
+
+    **- myhostname (default: see "postconf -d" output)**
+    The internet hostname of this mail system. The default is to use the fully-qualified domain name (FQDN) from gethostname(), or to use the non-FQDN result from gethostname() and append ".$mydomain". $myhostname is used as a default value for many other configuration parameters.
+    Example:
+
+    ```shell
+    myhostname = host.example.com
     ```
 
 - **2.3 Why is it a really bad idea to set mynetworks broader than necessary (e.g. to 0.0.0.0/0)? 1p**
-    **Solution**  
-    ```
-
-    ```
+**Solution**  
+**mynetworks (default: see "postconf -d" output)**
+The list of "trusted" remote SMTP clients that have more privileges than "strangers".
+In particular, "trusted" SMTP clients are allowed to relay mail through Postfix. See the smtpd_relay_restrictions parameter description in the postconf(5) manual.  
+Configuring the mynetworks mean turning the mail server into an open relay.
+Anyone on the Internet can use the server to send email without authentication. Resoursce abuse.
 
 - **2.4 What is the idea behind the ETRN and VRFY verbs? How can a malicious party misuse the commands? 2p**
+**Solution**
+The **`ETRN`** command is used to request a remote mail server to start the process of sending queued mail messages to the server that issued the command. 
+It Allows systems that are not always connected to the internet to request mail from a queue when they connect.
+    **- Spamming:** malicious party could potentially use the ETRN command to flood a server with queued messages, leading to a denial of service (DoS) or overwhelming the server with spam.
+    **- Unsolicited Queue Flushing:** If not properly authenticated or restricted, malicious parties could trigger the delivery of queued messages at inconvenient times, disrupting the intended flow of email delivery and possibly leading to resource exhaustion.
+    The **`VRFY`** command is used to verify if a particular user name or mailbox exists on the receiving server.
+    **Spamming Preparation:** Spammers can use the VRFY command to compile lists of valid email addresses, which they can later target with unsolicited emails.
+    **Information Gathering:** Malicious parties can use it to gather information about valid users on a system, which could be used for targeted attacks or social engineering.
+
 
 - **2.5 Configure exim4 on lab2 to handle local emails and send all the rest to lab1. After you have configured postfix and exim4 you should be able to send mail from lab2 to lab1, but not vice versa. Use the standard debian package reconfiguration tool dpkg-reconfigure(8) to configure exim4.**
     ```
     ```
 
 ## 3. Sending email
+
 > Send a message from `lab2` to `username@lab1` using `mail(1)`. Replace the `username` with your username. Read the message on lab1. See also email message headers. See incoming message information from `/var/log/mail.log` using `tail(1)`.
 
 - **3.0 send mails using `mail`**
+
     ```shell
     echo 'mail content' | mail -s "Subject" vagrant@tlab1
     ```
@@ -117,6 +156,7 @@ tlab2 192.168.10.11
 - **3.2 Explain shortly the email headers. At what point is each header added? 2p**
 
 ## 4. Configuring procmail and spamassassin
+
 > Next, you will configure procmail to deliver any incoming mail for spam filtering to spamassassin, and then filter to folders with self-configured rules.
 >
 > Procmail is configured by writing instruction sets caller recipes to a configuration file `procmailrc(5)`. Edit (create if necessary) `/etc/procmailrc` and begin by piping your arriving emails into spamassassin with the following recipe:
@@ -125,10 +165,13 @@ tlab2 192.168.10.11
 > :0fw
 > | /usr/bin/spamassassin
 > ```
+>
 > In postfix main.cf, you have to enable procmail with mailbox_command line:
-> ```
+>
+> ```shell
 > /usr/bin/procmail -a "$USER"
 > ```
+>
 > Remember to reload postfix configuration after editing it.
 >
 > You may need to start the spamassassin daemon after enabling it in the configuration file `/etc/default/spamassassin`.
@@ -142,9 +185,12 @@ tlab2 192.168.10.11
 >
 > - Forward a copy of the message with the same `[cs-e4160]` header to `testuser1@lab1` (create user if necessary).
 >
->  Hint: You can use file .procmailrc in user's home directory for user-specific rules.
+> Hint: You can use file .procmailrc in user's home directory for user-specific rules.
+
 - **4.0**
+
 modify `/etc/procmailrc`
+
 ```config
 :0fw
 | /usr/bin/spamc
@@ -153,7 +199,9 @@ modify `/etc/procmailrc`
 * ^X-Spam-Status: Yes
 .spam/
 ```
+
 create and modify `~/.procmailrc`
+
 ```config
 # Save messages with [cs-e4160] in the subject to a folder
 :0 c:
@@ -165,9 +213,3 @@ create and modify `~/.procmailrc`
 * ^Subject:.*\[cs-e4160\]
 ! testuser1@tlab1
 ```
-
-
-
-
-
-
