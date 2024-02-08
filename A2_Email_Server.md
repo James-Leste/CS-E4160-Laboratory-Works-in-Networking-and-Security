@@ -118,7 +118,7 @@ tlab2 192.168.10.11
     myhostname = host.example.com
     ```
 
-- **2.3 Why is it a really bad idea to set mynetworks broader than necessary (e.g. to 0.0.0.0/0)? 1p**
+- **2.3 Why is it a really bad idea to set mynetworks broader than necessary (e.g. to 0.0.0.0/0)? 1p**  
 **Solution**  
 **mynetworks (default: see "postconf -d" output)**
 The list of "trusted" remote SMTP clients that have more privileges than "strangers".
@@ -126,7 +126,7 @@ In particular, "trusted" SMTP clients are allowed to relay mail through Postfix.
 Configuring the mynetworks mean turning the mail server into an open relay.
 Anyone on the Internet can use the server to send email without authentication. Resoursce abuse.
 
-- **2.4 What is the idea behind the ETRN and VRFY verbs? How can a malicious party misuse the commands? 2p**
+- **2.4 What is the idea behind the ETRN and VRFY verbs? How can a malicious party misuse the commands? 2p**  
 **Solution**
 The **`ETRN`** command is used to request a remote mail server to start the process of sending queued mail messages to the server that issued the command.
 It Allows systems that are not always connected to the internet to request mail from a queue when they connect.
@@ -136,7 +136,7 @@ It Allows systems that are not always connected to the internet to request mail 
     **Spamming Preparation:** Spammers can use the VRFY command to compile lists of valid email addresses, which they can later target with unsolicited emails.
     **Information Gathering:** Malicious parties can use it to gather information about valid users on a system, which could be used for targeted attacks or social engineering.
 
-- **2.5 Configure exim4 on lab2 to handle local emails and send all the rest to lab1. After you have configured postfix and exim4 you should be able to send mail from lab2 to lab1, but not vice versa. Use the standard debian package reconfiguration tool dpkg-reconfigure(8) to configure exim4. 1p**
+- **2.5 Configure exim4 on lab2 to handle local emails and send all the rest to lab1. After you have configured postfix and exim4 you should be able to send mail from lab2 to lab1, but not vice versa. Use the standard debian package reconfiguration tool dpkg-reconfigure(8) to configure exim4. 1p**  
 use debian config tool to configure exim4 on `tlab2`
 
     ```shell
@@ -172,13 +172,13 @@ dc_localdelivery='mail_spool'
 
 > Send a message from `lab2` to `username@lab1` using `mail(1)`. Replace the `username` with your username. Read the message on lab1. See also email message headers. See incoming message information from `/var/log/mail.log` using `tail(1)`.
 
-- **3.0 send mails using `mail`**
+- **3.0 send mails using `mail`**  
 
     ```shell
     echo 'mail content' | mail -s "Subject" vagrant@tlab1
     ```
 
-- **3.1 Explain shortly the incoming mail log messages. 2p**
+- **3.1 Explain shortly the incoming mail log messages. 2p**  
 /var/log/mail.log
 
     ```log
@@ -208,7 +208,7 @@ dc_localdelivery='mail_spool'
     Feb  8 16:38:22 tlab1 postfix/qmgr[28356]: BB9A13E853: removed
     ```
 
-- **3.2 Explain shortly the email headers. At what point is each header added? 2p**
+- **3.2 Explain shortly the email headers. At what point is each header added? 2p**  
 
     ```config
     <!-- If the path can't be reached -->
@@ -275,7 +275,7 @@ dc_localdelivery='mail_spool'
 >
 > Hint: You can use file .procmailrc in user's home directory for user-specific rules.
 
-- **4.0 procmail configuration with spamassassin**
+- **4.0 procmail configuration with spamassassin**  
 
     modify `/etc/procmailrc`
 
@@ -307,8 +307,8 @@ dc_localdelivery='mail_spool'
     ! testuser1@tlab1
     ```
 
-- **4.1 How can you automatically filter spam messages to a different folder using procmail? Demonstrate by sending a message that gets flagged as spam. 2p**
-**Solution**
+- **4.1 How can you automatically filter spam messages to a different folder using procmail? Demonstrate by sending a message that gets flagged as spam. 2p**  
+**Solution**  
     from vagrant@tlab2 send email using `mail` command
 
     ```shell
@@ -316,8 +316,8 @@ dc_localdelivery='mail_spool'
     " vagrant@tlab1
     ```
 
-- **4.2 Demonstrate the filter rules created for messages with `[cs-e4160]` in the subject field by sending a message from lab2 to `<user>@lab1` using the header. 2p**
-**Solution**
+- **4.2 Demonstrate the filter rules created for messages with `[cs-e4160]` in the subject field by sending a message from lab2 to `<user>@lab1` using the header. 2p**  
+**Solution**  
     from vagrant@tlab2 send email using `mail` command
 
     ```shell
@@ -327,7 +327,7 @@ dc_localdelivery='mail_spool'
 
     The mail would be found in `~/.cs-e4160/new`
 
-- **4.3 Explain briefly the additional email headers (compared to step 3.2). 1p**
+- **4.3 Explain briefly the additional email headers (compared to step 3.2). 1p**  
     extra header
 
     ```config
@@ -381,17 +381,17 @@ dc_localdelivery='mail_spool'
 
 > Configuring a DNS server is the task for the B-path next week. Information about mail servers is also stored in the DNS system. To get a surface level understanding, study the topic from the internet.
 
-**5.1 What information is stored in MX records in the DNS system? 1p**
+**5.1 What information is stored in MX records in the DNS system? 1p**  
     **Priority:** An integer value that indicates the preference of the mail server. Lower values have higher priority. This system allows for backup mail servers to be set up (with higher priority values) to take over if the primary server (with the lowest priority value) is unavailable.
     **Mail server:** The hostname of the mail server that will receive the email for the domain.
 
-**5.2 Explain briefly two ways to make redundant email servers using multiple email servers and the DNS system. Name at least two reasons why you would have multiple email servers for a single domain? 2p**
-*Hint: Using multiple DNS servers is not the correct answer!*
-**How:**
-    From: <https://www.camner.net/home_page/resources/backupemail_how-to/email_dns_redundancy.htm#solutions_intro>
+**5.2 Explain briefly two ways to make redundant email servers using multiple email servers and the DNS system. Name at least two reasons why you would have multiple email servers for a single domain? 2p**  
+*Hint: Using multiple DNS servers is not the correct answer!*  
+**How:**  
+    From: <https://www.camner.net/home_page/resources/backupemail_how-to/email_dns_redundancy.htm#solutions_intro>  
     - You add an additional email server and set it to forward your emails.
     - A "queue and store" email backup service collects and stores emails addressed to <anyone@yourdomain.com> whenever your receiving email server is unavailable. The backup service periodically tests to see if your receiving server is back up and sends the collected emails on when your receiving server is available.
 
-**Why:**
+**Why:**  
     - If one server goes mail server goes down, another one can continue to process emails reducing downtime
     - Multiple email servers can share the load of incoming and outgoing email traffic, which is particularly important for domains with high email volume.
