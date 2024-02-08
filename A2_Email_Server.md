@@ -11,7 +11,7 @@ tlab2 192.168.10.11
 
 > During this assignment you will need two hosts (`lab1` and `lab2`). Configure them in the same network, such that they can communicate to each other for mail delivery.
 
-- **1.1 Add the IPv4 addresses and aliases of lab1 and lab2 on both computers to the /etc/hosts file.**  
+- **1.1 Add the IPv4 addresses and aliases of lab1 and lab2 on both computers to the /etc/hosts file. 1p**  
 
     **Solution**
     Edit `/etc/hosts` fot `tlab1` & `tlab2`  
@@ -136,7 +136,7 @@ It Allows systems that are not always connected to the internet to request mail 
     **Spamming Preparation:** Spammers can use the VRFY command to compile lists of valid email addresses, which they can later target with unsolicited emails.
     **Information Gathering:** Malicious parties can use it to gather information about valid users on a system, which could be used for targeted attacks or social engineering.
 
-- **2.5 Configure exim4 on lab2 to handle local emails and send all the rest to lab1. After you have configured postfix and exim4 you should be able to send mail from lab2 to lab1, but not vice versa. Use the standard debian package reconfiguration tool dpkg-reconfigure(8) to configure exim4.**
+- **2.5 Configure exim4 on lab2 to handle local emails and send all the rest to lab1. After you have configured postfix and exim4 you should be able to send mail from lab2 to lab1, but not vice versa. Use the standard debian package reconfiguration tool dpkg-reconfigure(8) to configure exim4. 1p**
 use debian config tool to configure exim4 on `tlab2`
 
     ```shell
@@ -307,7 +307,7 @@ dc_localdelivery='mail_spool'
     ! testuser1@tlab1
     ```
 
-- **4.1 How can you automatically filter spam messages to a different folder using procmail? Demonstrate by sending a message that gets flagged as spam.**
+- **4.1 How can you automatically filter spam messages to a different folder using procmail? Demonstrate by sending a message that gets flagged as spam. 2p**
 **Solution**
     from vagrant@tlab2 send email using `mail` command
 
@@ -316,7 +316,7 @@ dc_localdelivery='mail_spool'
     " vagrant@tlab1
     ```
 
-- **4.2 Demonstrate the filter rules created for messages with `[cs-e4160]` in the subject field by sending a message from lab2 to `<user>@lab1` using the header.**
+- **4.2 Demonstrate the filter rules created for messages with `[cs-e4160]` in the subject field by sending a message from lab2 to `<user>@lab1` using the header. 2p**
 **Solution**
     from vagrant@tlab2 send email using `mail` command
 
@@ -327,7 +327,7 @@ dc_localdelivery='mail_spool'
 
     The mail would be found in `~/.cs-e4160/new`
 
-- **4.3 Explain briefly the additional email headers (compared to step 3.2).**
+- **4.3 Explain briefly the additional email headers (compared to step 3.2). 1p**
     extra header
 
     ```config
@@ -382,5 +382,13 @@ dc_localdelivery='mail_spool'
 > Configuring a DNS server is the task for the B-path next week. Information about mail servers is also stored in the DNS system. To get a surface level understanding, study the topic from the internet.
 
 **5.1 What information is stored in MX records in the DNS system? 1p**
+    **Priority:** An integer value that indicates the preference of the mail server. Lower values have higher priority. This system allows for backup mail servers to be set up (with higher priority values) to take over if the primary server (with the lowest priority value) is unavailable.
+    **Mail server:** The hostname of the mail server that will receive the email for the domain.
 
 **5.2 Explain briefly two ways to make redundant email servers using multiple email servers and the DNS system. Name at least two reasons why you would have multiple email servers for a single domain? 2p**
+*Hint: Using multiple DNS servers is not the correct answer!*
+**How:**
+    <https://www.camner.net/home_page/resources/backupemail_how-to/email_dns_redundancy.htm#solutions_intro>
+**Why:**
+    - If one server goes mail server goes down, another one can continue to process emails reducing downtime
+    - Multiple email servers can share the load of incoming and outgoing email traffic, which is particularly important for domains with high email volume.
