@@ -105,6 +105,8 @@ Advantages of Event-Driven Programming:
 
 ### 3.1 Provide and explain your solution. 1p
 
+On lab2
+
 1. Create private key
 
     ```shell
@@ -166,6 +168,63 @@ In `/etc/apache2/sites-available/default-ssl.conf`
 
 ### 4.1 Provide and explain your solution. 2p
 
+On lab2
+
+1. create directories and index files 
+
+    ```shell
+    mkdir public_html 
+
+    cd public_html 
+
+    touch index.html #(echo “<html><h1>hello world</h1></html>” >> index.html) 
+
+    mkdir secure_secrets 
+
+    touch index.html #(echo “<html><h1>You’ve found the secret!</h1></html>”) 
+    ```
+
+2. enable userdir mod 
+
+    ```shell
+    sudo a2enmod userdir 
+    ```
+
+3. modify folder and file permission level
+
+    ```shell
+
+    ```
+
+4. create directories and index files
+
+    Every component of the path should be chmod 755.
+
+5. create directories and index files 
+
+    Then it should be accessible to <http://localhost/~vagrant/> & <http://localhost/~vagrant/secure_secrets/>
+
+6. set up enforcement access to the secure_secrets subdirectory with HTTPS
+
+    ```shell
+    sudo a2enmod rewrite
+
+    cd ~/public_html
+
+    nano .htaccess
+    ```
+
+7. write in .htaccess
+
+    ```config
+    RewriteEngine On 
+    RewriteCond %{HTTPS} off 
+    RewriteCond %{REQUEST_URI} secure_secrets 
+    RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301] 
+    ```
+
+Go to browser or curl to send a GET request to <http://localhost/~vagrant/secure_secret/>, it would shoe 301 moved permanently to https site.
+
 ### 4.2 What is HSTS? 1p
 
 ### 4.3 When to use .htaccess? In contrast, when not to use it? 1p
@@ -174,10 +233,8 @@ In `/etc/apache2/sites-available/default-ssl.conf`
 ## 5. Install nginx as a reverse proxy
 
 > Nginx is a third commonly used way of serving webpages, and also allows functioning as a proxy. Next, you are going to serve both Apache2 and Node.js hello world from lab1 using nginx as a reverse proxy.
-
-Install nginx on lab1 and configure it to act as a gateway to both Apache2 at lab2 and Node.js at lab3 the following way:
-
-HTTP requests to http://lab1/apache are directed to Apache2 server listening on lab2:80 and requests to http://lab1/node to Node.js server on lab3:8080.
+> Install nginx on lab1 and configure it to act as a gateway to both Apache2 at lab2 and Node.js at lab3 the following way:
+> HTTP requests to http://lab1/apache are directed to Apache2 server listening on lab2:80 and requests to http://lab1/node to Node.js server on lab3:8080.
 
 5.1
 
