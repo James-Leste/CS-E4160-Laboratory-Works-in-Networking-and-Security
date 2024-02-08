@@ -388,7 +388,10 @@ dc_localdelivery='mail_spool'
 **5.2 Explain briefly two ways to make redundant email servers using multiple email servers and the DNS system. Name at least two reasons why you would have multiple email servers for a single domain? 2p**
 *Hint: Using multiple DNS servers is not the correct answer!*
 **How:**
-    <https://www.camner.net/home_page/resources/backupemail_how-to/email_dns_redundancy.htm#solutions_intro>
+    From: <https://www.camner.net/home_page/resources/backupemail_how-to/email_dns_redundancy.htm#solutions_intro>
+    - You add an additional email server and set it to forward your emails.
+    - A "queue and store" email backup service collects and stores emails addressed to <anyone@yourdomain.com> whenever your receiving email server is unavailable. The backup service periodically tests to see if your receiving server is back up and sends the collected emails on when your receiving server is available.
+
 **Why:**
     - If one server goes mail server goes down, another one can continue to process emails reducing downtime
     - Multiple email servers can share the load of incoming and outgoing email traffic, which is particularly important for domains with high email volume.
