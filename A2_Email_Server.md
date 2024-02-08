@@ -128,7 +128,7 @@ Anyone on the Internet can use the server to send email without authentication. 
 
 - **2.4 What is the idea behind the ETRN and VRFY verbs? How can a malicious party misuse the commands? 2p**
 **Solution**
-The **`ETRN`** command is used to request a remote mail server to start the process of sending queued mail messages to the server that issued the command. 
+The **`ETRN`** command is used to request a remote mail server to start the process of sending queued mail messages to the server that issued the command.
 It Allows systems that are not always connected to the internet to request mail from a queue when they connect.
     **- Spamming:** malicious party could potentially use the ETRN command to flood a server with queued messages, leading to a denial of service (DoS) or overwhelming the server with spam.
     **- Unsolicited Queue Flushing:** If not properly authenticated or restricted, malicious parties could trigger the delivery of queued messages at inconvenient times, disrupting the intended flow of email delivery and possibly leading to resource exhaustion.
@@ -136,10 +136,37 @@ It Allows systems that are not always connected to the internet to request mail 
     **Spamming Preparation:** Spammers can use the VRFY command to compile lists of valid email addresses, which they can later target with unsolicited emails.
     **Information Gathering:** Malicious parties can use it to gather information about valid users on a system, which could be used for targeted attacks or social engineering.
 
-
 - **2.5 Configure exim4 on lab2 to handle local emails and send all the rest to lab1. After you have configured postfix and exim4 you should be able to send mail from lab2 to lab1, but not vice versa. Use the standard debian package reconfiguration tool dpkg-reconfigure(8) to configure exim4.**
+use debian config tool to configure exim4 on `tlab2`
+
+    ```shell
+    sudo dpkg-reconfigure exim4-config
     ```
-    ```
+
+  - General type: smarthost
+  - Mail name: `tlab2` (or preferred name)
+  - IP-addresses to listen on for incoming SMTP connections: `192.168.10.11`
+  - Other destinations for which mail is accepted: `tlab2`
+  - Machines to relay mail for: blank
+  Keep number of DNS-queries minimal (Dial-on-Demand)?: No
+
+Edit `/etc/exim4/update-exim4.conf.conf`
+
+```shell
+dc_eximconfig_configtype='internet'
+dc_other_hostnames='tlab2'
+dc_local_interfaces='127.0.0.1 ; ::1 ; 192.168.10.11'
+dc_readhost=''
+dc_relay_domains='tlab1'
+dc_minimaldns='false'
+dc_relay_nets='192.168.10.0/24'
+dc_smarthost='192.168.10.10'
+CFILEMODE='644'
+dc_use_split_config='false'
+dc_hide_mailname=''
+dc_mailname_in_oh='true'
+dc_localdelivery='mail_spool'
+```
 
 ## 3. Sending email
 
@@ -152,8 +179,69 @@ It Allows systems that are not always connected to the internet to request mail 
     ```
 
 - **3.1 Explain shortly the incoming mail log messages. 2p**
+/var/log/mail.log
+
+    ```log
+    Feb  8 16:38:22 tlab1 postfix/smtpd[28408]: connect from tlab2[192.168.10.11]
+    <!-- Denial of ETRN -->
+    Feb  8 16:38:22 tlab1 postfix/smtpd[28408]: discarding EHLO keywords: ETRN
+    <!-- bad certificate -->
+    Feb  8 16:38:22 tlab1 postfix/smtpd[28408]: warning: TLS library problem: error:0A000412:SSL routines::sslv3 alert bad certificate:../ssl/record/rec_layer_s3.c:1584:SSL alert number 42:
+    <!-- lose connection after try to initiate a TLS-secured session -->
+    Feb  8 16:38:22 tlab1 postfix/smtpd[28408]: lost connection after STARTTLS from tlab2[192.168.10.11]
+    <!-- disconnetion -->
+    Feb  8 16:38:22 tlab1 postfix/smtpd[28408]: disconnect from tlab2[192.168.10.11] ehlo=1 starttls=1 commands=2
+    <!-- reconnect -->
+    Feb  8 16:38:22 tlab1 postfix/smtpd[28408]: connect from tlab2[192.168.10.11]
+    <!-- discard ETRN -->
+    Feb  8 16:38:22 tlab1 postfix/smtpd[28408]: discarding EHLO keywords: ETRN
+    <!-- recognize client -->
+    Feb  8 16:38:22 tlab1 postfix/smtpd[28408]: BB9A13E853: client=tlab2[192.168.10.11]
+    <!-- clean up message, give a message-id header -->
+    Feb  8 16:38:22 tlab1 postfix/cleanup[28411]: BB9A13E853: message-id=<E1rY7Pq-0006vU-M0@tlab2>
+    <!-- queue manager accept the file -->
+    Feb  8 16:38:22 tlab1 postfix/qmgr[28356]: BB9A13E853: from=<vagrant@tlab2>, size=579, nrcpt=1 (queue active)
+    <!-- disconnect -->
+    Feb  8 16:38:22 tlab1 postfix/smtpd[28408]: disconnect from tlab2[192.168.10.11] ehlo=1 mail=1 rcpt=1 bdat=1 quit=1 commands=5
+    <!-- sent using procmail -->
+    Feb  8 16:38:22 tlab1 postfix/local[28412]: BB9A13E853: to=<vagrant@tlab1>, relay=local, delay=0.03, delays=0.01/0.01/0/0.01, dsn=2.0.0, status=sent (delivered to command: /usr/bin/procmail -a "$USER")
+    Feb  8 16:38:22 tlab1 postfix/qmgr[28356]: BB9A13E853: removed
+    ```
 
 - **3.2 Explain shortly the email headers. At what point is each header added? 2p**
+
+    ```config
+    <!-- If the path can't be reached -->
+    Return-Path: <vagrant@tlab2>
+    <!-- original recipient with out forwarding -->
+    X-Original-To: vagrant@tlab1
+    <!-- final recipient -->
+    Delivered-To: vagrant@tlab1
+    <!-- postfix side info -->
+    Received: from tlab2 (tlab2 [192.168.10.11])
+            by tlab1 (Postfix) with ESMTP id BB9A13E853
+            for <vagrant@tlab1>; Thu,  8 Feb 2024 16:38:22 +0000 (UTC)
+    <!-- exim4 side info -->
+    Received: from vagrant by tlab2 with local (Exim 4.95)
+            (envelope-from <vagrant@tlab2>)
+            id 1rY7Pq-0006vU-M0
+            for vagrant@tlab1;
+            Thu, 08 Feb 2024 16:38:22 +0000
+    <!-- primary recipient -->
+    To: vagrant@tlab1
+    Subject: Another test normal message
+    <!-- Multipurpose Internet Mail Extensions, allow text, images, etc. -->
+    MIME-Version: 1.0
+    Content-Type: text/plain; charset="UTF-8"
+    Content-Transfer-Encoding: 8bit
+    <!-- generated by the sender server -->
+    Message-Id: <E1rY7Pq-0006vU-M0@tlab2>
+    <!-- sender -->
+    From: vagrant@tlab2
+    Date: Thu, 08 Feb 2024 16:38:22 +0000
+    X-UID: 2
+    Status: O
+    ```
 
 ## 4. Configuring procmail and spamassassin
 
@@ -187,29 +275,112 @@ It Allows systems that are not always connected to the internet to request mail 
 >
 > Hint: You can use file .procmailrc in user's home directory for user-specific rules.
 
-- **4.0**
+- **4.0 procmail configuration with spamassassin**
 
-modify `/etc/procmailrc`
+    modify `/etc/procmailrc`
 
-```config
-:0fw
-| /usr/bin/spamc
+    ```conf
+    # 0 means locking
+    # f filter
+    # w Procmail should wait for the filter program to complete and use its exit status to determine if the recipe was successful.
+    :0fw
+    | /usr/bin/spamc
 
-:0:
-* ^X-Spam-Status: Yes
-.spam/
-```
+    # :0: the second : means a lock to the destination mailbox ensure safety transfer
+    :0:
+    * ^X-Spam-Status: Yes
+    .spam/
+    ```
 
-create and modify `~/.procmailrc`
+    create and modify `~/.procmailrc`
 
-```config
-# Save messages with [cs-e4160] in the subject to a folder
-:0 c:
-* ^Subject:.*\[cs-e4160\]
-.cs-e4160/
+    ```config
+    <!-- c means using a carbon copy of the mail -->
+    # Save messages with [cs-e4160] in the subject to a folder
+    :0 c:
+    * ^Subject:.*\[cs-e4160\]
+    .cs-e4160/
 
-# Forward messages with [cs-e4160] in the subject
-:0 c
-* ^Subject:.*\[cs-e4160\]
-! testuser1@tlab1
-```
+    # Forward messages with [cs-e4160] in the subject
+    :0 c
+    * ^Subject:.*\[cs-e4160\]
+    ! testuser1@tlab1
+    ```
+
+- **4.1 How can you automatically filter spam messages to a different folder using procmail? Demonstrate by sending a message that gets flagged as spam.**
+**Solution**
+    from vagrant@tlab2 send email using `mail` command
+
+    ```shell
+    echo "XJS*C4JDBQADN1.NSBN3*2IDNEN*GTUBE-STANDARD-ANTI-UBE-TEST-EMAIL*C.34X TESTTEST" | mail -s "TEST SPAM
+    " vagrant@tlab1
+    ```
+
+- **4.2 Demonstrate the filter rules created for messages with `[cs-e4160]` in the subject field by sending a message from lab2 to `<user>@lab1` using the header.**
+**Solution**
+    from vagrant@tlab2 send email using `mail` command
+
+    ```shell
+    echo "test content" | mail -s "[cs-e4160]
+    " vagrant@tlab1
+    ```
+
+    The mail would be found in `~/.cs-e4160/new`
+
+- **4.3 Explain briefly the additional email headers (compared to step 3.2).**
+    extra header
+
+    ```config
+    X-Spam-Checker-Version: SpamAssassin 3.4.6 (2021-04-09) on tlab1
+    <!-- low spam level -->
+    X-Spam-Level:
+    <!-- ALL_TRUSTED: pass through trust server only -->
+    <!-- TO_MALFORMED:format of the 'To' field -->
+    X-Spam-Status: No, score=-0.9 required=5.0 tests=ALL_TRUSTED,TO_MALFORMED
+            autolearn=no autolearn_force=no version=3.4.6
+    ```
+
+    /var/log/mail.log
+
+  ```log
+    <!-- post fix pickup from vagrant, assign internal id -->
+    Feb  8 16:20:06 tlab1 postfix/pickup[28355]: E98073E854: uid=1000 from=<vagrant>
+    
+    <!-- post clean up, assign message-id -->
+    Feb  8 16:20:06 tlab1 postfix/cleanup[28370]: E98073E854: message-id=<20240208162006.E98073E854@tlab1>
+
+    <!-- queue manager take message(450 bytes) to delivery -->
+    Feb  8 16:20:06 tlab1 postfix/qmgr[28356]: E98073E854: from=<vagrant@tlab1>, size=450, nrcpt=1 (queue active)
+
+    <!-- spamassassin connection -->
+    Feb  8 16:20:06 tlab1 spamd[20330]: spamd: connection from ::1 [::1]:52454 to port 783, fd 5
+
+    <!-- spamassassin change user id to root -->
+    Feb  8 16:20:06 tlab1 spamd[20330]: spamd: setuid to root succeeded
+
+    <!-- fallback to nobody -->
+    Feb  8 16:20:06 tlab1 spamd[20330]: spamd: still running as root: user not specified with -u, not found, or set to root, falling back to nobody
+
+    <!-- message processed by spamassassin -->
+    Feb  8 16:20:06 tlab1 spamd[20330]: spamd: processing message <20240208162006.E98073E854@tlab1> for root:65534
+
+    <!-- spamassassin give result (0.1/0.5) -->
+    Feb  8 16:20:07 tlab1 spamd[20330]: spamd: clean message (0.1/5.0) for root:65534 in 0.0 seconds, 557 bytes.
+
+    <!-- spamassassin detailed info -->
+    Feb  8 16:20:07 tlab1 spamd[20330]: spamd: result: . 0 - NO_RELAYS,TO_MALFORMED scantime=0.0,size=557,user=root,uid=65534,required_score=5.0,rhost=::1,raddr=::1,rport=52454,mid=<20240208162006.E98073E854@tlab1>,autolearn=no autolearn_force=no
+
+    <!--  postfix local delivery agent has successfully delivered the mail to root@tlab1, using local relay -->
+    Feb  8 16:20:07 tlab1 postfix/local[28371]: E98073E854: to=<root@tlab1>, orig_to=<root>, relay=local, delay=0.05, delays=0.01/0/0/0.05, dsn=2.0.0, status=sent (delivered to command: /usr/bin/procmail -a "$USER")
+
+    <!-- remove from queue -->
+    Feb  8 16:20:07 tlab1 postfix/qmgr[28356]: E98073E854: removed
+    ```
+
+## 5. E-mail servers and DNS
+
+> Configuring a DNS server is the task for the B-path next week. Information about mail servers is also stored in the DNS system. To get a surface level understanding, study the topic from the internet.
+
+**5.1 What information is stored in MX records in the DNS system? 1p**
+
+**5.2 Explain briefly two ways to make redundant email servers using multiple email servers and the DNS system. Name at least two reasons why you would have multiple email servers for a single domain? 2p**
