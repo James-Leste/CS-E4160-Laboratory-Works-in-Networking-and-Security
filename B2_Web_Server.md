@@ -293,7 +293,7 @@ Only use it when the main configuration file is not accessible
     }
     ```
 
-4. Create symbolic link in /etc/nginx/sites_enabled/ 
+4. Create symbolic link in /etc/nginx/sites_enabled/
 
     ```shell
     sudo ln -s /etc/nginx/sites-available/lab2-proxy /etc/nginx/sites-enabled/
