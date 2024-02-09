@@ -158,7 +158,27 @@ In `/etc/apache2/sites-available/default-ssl.conf`
 
 ### 3.2 What information can a certificate include? What is necessary for it to work in the context of a web server? 1p
 
+#### Information included in a certificate
+
+**Subject:** The entity (person, organization, device, or website domain) the certificate represents.
+**Issuer:** The Certificate Authority (CA) that issued the certificate. The issuer's signature verifies the certificate's authenticity.
+Validity Period: The start date and expiry date, which define the timeframe during which the certificate is considered valid.
+**Public Key:** The public key corresponding to the private key owned by the subject. The public key is used by clients to encrypt data that can only be decrypted by the corresponding private key.
+Signature Algorithm: The algorithm used by the CA to sign the certificate, ensuring its integrity.
+**Serial Number:** A unique identifier for the certificate issued by the CA.
+Subject Alternative Names (SANs): Additional domain names or IP addresses covered by the certificate.
+**Extensions:** Additional fields that provide various functionalities and constraints, such as key usage (digital signatures, key encipherment, etc.), enhanced key usage, and constraints on the certificate's use.
+
+#### What is necessary
+
+- The server must have a private key that corresponds to the public key in the certificate.
+- The certificate must be properly installed and configured on the web server. This involves configuring the web server software (such as Apache or Nginx) to use the certificate and private key for SSL/TLS connections.
+- The server should also provide the intermediate certificates that link the server's certificate to a trusted root CA certificate.
+- The server typically listens on port 443 for HTTPS connections, as opposed to port 80 for HTTP.
+
 ### 3.3 What do PKI and requesting a certificate mean? 1p
+
+PKI (Public Key Infrastructure): PKI is a framework used to create, manage, distribute, use, store, and revoke digital certificates. It is based on public key cryptography, where keys come in pairs (public and private).
 
 ## 4. Enforcing HTTPS
 
@@ -170,7 +190,7 @@ In `/etc/apache2/sites-available/default-ssl.conf`
 
 On lab2
 
-1. create directories and index files 
+1. create directories and index files
 
     ```shell
     mkdir public_html 
@@ -184,7 +204,7 @@ On lab2
     touch index.html #(echo “<html><h1>You’ve found the secret!</h1></html>”) 
     ```
 
-2. enable userdir mod 
+2. enable userdir mod
 
     ```shell
     sudo a2enmod userdir 
@@ -193,14 +213,14 @@ On lab2
 3. modify folder and file permission level
 
     ```shell
-
+    sudo chmod /path 755 
     ```
 
 4. create directories and index files
 
     Every component of the path should be chmod 755.
 
-5. create directories and index files 
+5. create directories and index files
 
     Then it should be accessible to <http://localhost/~vagrant/> & <http://localhost/~vagrant/secure_secrets/>
 
@@ -227,29 +247,122 @@ Go to browser or curl to send a GET request to <http://localhost/~vagrant/secure
 
 ### 4.2 What is HSTS? 1p
 
+HTTP Strict Transport Security (HSTS) is a simple and widely supported standard to protect visitors by ensuring that their browsers always connect to a website over HTTPS.
+
 ### 4.3 When to use .htaccess? In contrast, when not to use it? 1p
 
- 
+The server must execute the .htaccess file to use it. This means that the server will need to use extra RAM, CPU power, and computing time to process a .htaccess file. This means each request that runs through a .htaccess file will take more resources and time.
+Only use it when the main configuration file is not accessible
+
 ## 5. Install nginx as a reverse proxy
 
 > Nginx is a third commonly used way of serving webpages, and also allows functioning as a proxy. Next, you are going to serve both Apache2 and Node.js hello world from lab1 using nginx as a reverse proxy.
 > Install nginx on lab1 and configure it to act as a gateway to both Apache2 at lab2 and Node.js at lab3 the following way:
-> HTTP requests to http://lab1/apache are directed to Apache2 server listening on lab2:80 and requests to http://lab1/node to Node.js server on lab3:8080.
+> HTTP requests to <http://lab1/apache> are directed to Apache2 server listening on lab2:80 and requests to <http://lab1/node> to Node.js server on lab3:8080.
 
-5.1
+### 5.1 Provide a working solution serving both web applications from nginx. 2p
 
-Provide a working solution serving both web applications from nginx.
+1. Install Nginx
 
-2p
+    ```shell
+    sudo apt update
+    sudp apt install nginx
+    ```
 
-5.2
+2. Set up proxy
 
-Explain the contents of the nginx configuration file.
+    ```shell
+    sudo nano /etc/nginx/sites-available/lab_proxy
+    ```
 
-1p
+3. In lab_proxy file
 
-5.3
+    ```conf
+    server {
+        listen 80;
+        server_name lab1;
 
-What is commonly the primary purpose of an nginx server and why?
+        location /node {
+                proxy_pass http://192.168.20.11:8080/;
+        }
 
-1p
+        location /apache {
+                proxy_pass http://192.168.10.11/;
+        }
+
+    }
+    ```
+
+4. Create symbolic link in /etc/nginx/sites_enabled/ 
+
+    ```shell
+    sudo ln -s /etc/nginx/sites-available/lab2-proxy /etc/nginx/sites-enabled/
+    ```
+
+5. Check nginx configuration correctness
+
+    ```shell
+        sudo nginx -t
+    ```
+
+6. Reload nginx
+
+    ```shell
+    sudo systemctl reload nginx
+    ```
+
+7. Testing
+
+    ```shell
+    curl http://lab1/apache/
+    curl http://lab1/node/
+    ```
+
+### 5.2 Explain the contents of the nginx configuration file. 1p
+
+Just Explain
+
+### 5.3 What is commonly the primary purpose of an nginx server and why? 1p
+
+NGINX stands out as an efficient load balancer, adept at distributing incoming web traffic across multiple servers.
+
+Implementing NGINX as a reverse proxy protects back-end servers from direct exposure to the internet.
+
+## 6. Test Damn Vulnerable Web Application
+
+> For security purposes, security professionals and penetration testers set up a Damn Vulnerable Web Application to practice some of the most common vulnerabilities. To achieve this goal, you can download the file in <https://github.com/digininja/DVWA/archive/master.zip> and install it on lab2. Video link: <https://youtu.be/WkyDxNJkgQ4> for guidance.
+> You can delete the default Apache index.html and install the web application to be served as the default webpage. Finally, install Nikto tool which is an open-source web server scanner on lab 1 and scan your vulnerable web application.
+
+### 6.1 Using Nmap, enumerate the lab2, and detect the os version, php version, apache version and open ports 2p
+
+On lab1
+
+```shell
+nmap 192.168.10.11
+```
+
+Service version detection
+
+```shell
+nmap -sV 192.168.10.11
+```
+
+OS detection (sudo level)
+
+```shell
+sudo nmap -O 192.168.10.11
+```
+
+Agressive Scan (sudo level)
+
+```shell
+sudo nmap -A 192.168.10.11
+```
+
+### 6.2 Using Nikto, to detect vulnerabilities on lab2 2p
+
+On lab1
+
+```shell
+nikto http://lab1/apache
+```
