@@ -160,14 +160,14 @@ In `/etc/apache2/sites-available/default-ssl.conf`
 
 #### Information included in a certificate
 
-**Subject:** The entity (person, organization, device, or website domain) the certificate represents.
-**Issuer:** The Certificate Authority (CA) that issued the certificate. The issuer's signature verifies the certificate's authenticity.
-Validity Period: The start date and expiry date, which define the timeframe during which the certificate is considered valid.
-**Public Key:** The public key corresponding to the private key owned by the subject. The public key is used by clients to encrypt data that can only be decrypted by the corresponding private key.
-Signature Algorithm: The algorithm used by the CA to sign the certificate, ensuring its integrity.
+**Subject:** The entity (person, organization, device, or website domain) the certificate represents.  
+**Issuer:** The Certificate Authority (CA) that issued the certificate. The issuer's signature verifies the certificate's authenticity.  
+**Validity Period:** The start date and expiry date, which define the timeframe during which the certificate is considered valid.  
+**Public Key:** The public key corresponding to the private key owned by the subject. The public key is used by clients to encrypt data that can only be decrypted by the corresponding private key.  
+**Signature Algorithm:** The algorithm used by the CA to sign the certificate, ensuring its integrity.  
 **Serial Number:** A unique identifier for the certificate issued by the CA.
-Subject Alternative Names (SANs): Additional domain names or IP addresses covered by the certificate.
-**Extensions:** Additional fields that provide various functionalities and constraints, such as key usage (digital signatures, key encipherment, etc.), enhanced key usage, and constraints on the certificate's use.
+**Subject Alternative Names (SANs):** Additional domain names or IP addresses covered by the certificate.  
+**Extensions:** Additional fields that provide various functionalities and constraints, such as key usage (digital signatures, key encipherment, etc.), enhanced key usage, and constraints on the certificate's use.  
 
 #### What is necessary
 
@@ -364,5 +364,5 @@ sudo nmap -A 192.168.10.11
 On lab1
 
 ```shell
-nikto http://lab1/apache
+nikto -h http://lab1/apache
 ```
