@@ -465,3 +465,60 @@ dig @192.168.10.12 ns3.not.insec 1y 2y 3y
 
 ## 6. Implement transaction signatures
 
+### 6.1 Explain the changes you made. Show the successful and the unsuccessful zone transfer in the log
+
+#### Generate key on whichever server(no difference)
+
+command
+
+```shell
+tsig-keygen -a HMAC-SHA256 keyname
+```
+
+output
+
+```shell
+key "keyname" {
+        algorithm hmac-sha256;
+        secret "jTC6zqv+16ysRSR+fjKlFKlqHRB1Wh8f6D3EA+61cPE=";
+};
+```
+
+#### In `ns2` (master for `not.insec`)
+
+create a file `/etc/bind/tsig.key` and paste the key content.
+
+In `/etc/bind/named.conf.local`, add line
+
+```shell
+include "/etc/bind/tsig.key";
+```
+
+add
+
+```shell
+zone "not.insec" {
+    type master;
+    file "/etc/bind/db.not.insec";
+    allow-transfer { key "keyname"; };
+    also-notify { 192.168.10.12 key "keyname"; };
+};
+```
+
+#### In `ns3` file `/etc/bind/named.conf.local`
+
+```shell
+zone "not.insec" {
+    type slave;
+    file "slaves/db.not.insec";
+    masters { 192.168.10.11 key "keyname"; }; // IP of ns2
+};
+```
+
+#### Reload and testing
+
+Use this to send a unauthenticated transfer
+
+```shell
+dig @192.168.10.11 axfr not.insec
+```
