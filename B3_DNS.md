@@ -352,12 +352,13 @@ As a result, the zone file would be transferred to `/var/cache/bind/slaves/`
 In case there is no `/var/cache/bind/slaves/` folder, this file should be created.
 
 ```shell
-sudo mkdir /var/cache/bind/slaves
-sudo chown bind:bind /var/cache/bind/slaves
-sudo chmod 775 /var/cache/bind/slaves
+sudo mkdir /var/cache/bind/slave
+sudo chown bind:bind /var/cache/bind/slave
+sudo chmod 775 /var/cache/bind/slave
 ```
 
 #### Verification
+
 Go to `/var/cache/bind/slaves/` to see if there are two zone files in this case.
 
 ### Provide the output of dig(1) for a successful query from the slave server. Are there any differences to the queries from the master?
@@ -386,4 +387,81 @@ ns2.insec.              86400   IN      A       192.168.10.11
 ;; MSG SIZE  rcvd: 82
 ```
 
-## 5. Create a subdomain .not.insec.
+## 5. Create a subdomain `.not.insec.`
+
+### 5.1 Explain the changes you made
+
+#### In ns1 `/etc/bind/db.insec`, Delegate `.not.insec` Subdomain on `ns1`
+
+Add
+
+```config
+not     IN      NS      ns2.insec.
+not     IN      NS      ns3.insec.
+ns2     IN      A       192.168.10.11
+ns3     IN      A       192.168.10.12
+```
+
+Increment serial number and reload, ensure the log doesn't show any errors.
+
+#### Configure `ns2` as Master for `.not.insec`
+
+create `/etc/bind/db.not.insec` with
+
+```config
+$TTL 86400
+@     IN  SOA ns2.insec. hostmaster.insec. (
+            1          ; Serial
+            86400      ; Refresh
+            7200       ; Retry
+            3600000    ; Expire
+            86400 )    ; Minimum
+@     IN  NS  ns2.insec.
+@     IN  NS  ns3.insec.
+ns2   IN  A   192.168.10.11
+ns3   IN  A   192.168.10.12
+```
+
+update `/etc/bind/named.conf.local`
+
+```config
+zone "not.insec" {
+    type master;
+    file "/etc/bind/db.not.insec";
+};
+```
+
+reload and verify
+
+#### Configure `ns3` as Slave for `.not.insec`
+
+In `/etc/bind/named.conf.local`
+
+```config
+zone "not.insec" {
+    type slave;
+    file "slaves/db.not.insec";
+    masters { 192.168.10.11; }; // IP of ns2
+};
+```
+
+Create `/var/cache/bind/slave/` directory and grant permission, then restart bind9.
+
+### 5.2 Provide the output of dig(1) for successful queries from all the three name servers
+
+```shell
+dig @192.168.10.10 ns1.not.insec 1n 2n 3n
+dig @192.168.10.11 ns1.not.insec 1n 2n 3n
+dig @192.168.10.12 ns1.not.insec 1n 2n 3n
+
+dig @192.168.10.10 ns2.not.insec 1n 2n 3n
+dig @192.168.10.11 ns2.not.insec 1y 2y 3y
+dig @192.168.10.12 ns2.not.insec 1y 2y 3y
+
+dig @192.168.10.10 ns3.not.insec 1n 2n 3n
+dig @192.168.10.11 ns3.not.insec 1y 2y 3y
+dig @192.168.10.12 ns3.not.insec 1y 2y 3y
+```
+
+## 6. Implement transaction signatures
+
