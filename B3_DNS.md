@@ -149,3 +149,241 @@ Put your machine's ip in ns1.insec's A record
 Similarly create a reverse mapping zone c.b.a.in-addr.arpa, where a, b and c are the first three numbers of the virtual machine's current IP address (i.e. IP = a.b.c.xxx -> c.b.a.in-addr.arpa).
 >
 > Add a master zone entry for .insec and c.b.a.in-addr.arpa (see above) in named.conf. Reload bind's configuration files and watch the log for errors. Try to resolve ns1.insec from your client.
+
+### 3.1 Explain your configuration
+
+#### Create the Forward Zone File for `.insec`
+
+Create and edit `/etc/bind/db.insec`
+
+```bash
+$TTL    3600
+@       IN      SOA     ns1.insec. hostmaster.insec. (
+                        2024022701 ; Serial
+                        60         ; Refresh
+                        60         ; Retry
+                        604800     ; Expire
+                        86400 )    ; Negative Cache TTL
+;
+@       IN      NS      ns1.insec.
+ns1     IN      A       192.168.10.10
+```
+
+#### Create the Reverse Zone File
+
+Assume ns1 ip address is 192.168.10.xxx
+Create and edit `/etc/bind/db.10.168.192`
+
+```bash
+$TTL    3600
+@       IN      SOA     ns1.insec. hostmaster.insec. (
+                        2024022702 ; Serial
+                        60         ; Refresh
+                        60         ; Retry
+                        604800     ; Expire
+                        86400 )    ; Negative Cache TTL
+;
+@       IN      NS      ns1.insec.
+xxx     IN      PTR     ns1.insec.
+```
+
+change the xxx accroding to 192.168.10.xxx
+
+#### Configure the Master Zones in `named.conf`
+
+Open and edit `/etc/bind/named.conf.local`
+
+```shell
+zone "insec" {
+        type master;
+        file "/etc/bind/db.insec";
+};
+
+zone "10.168.192.in-addr.arpa" {
+        type master;
+        file "/etc/bind/db.10.168.192";
+};
+```
+
+#### Check and restart
+
+```shell
+sudo named-checkconf
+sudo named-checkzone insec /etc/bind/db.insec
+sudo named-checkzone 10.168.192.in-addr.arpa /etc/bind/db.10.168.192
+
+sudo systemctl reload bind9
+```
+
+#### Test
+
+```shell
+dig ns1.insec @192.168.10.10
+```
+
+### 3.2 Provide the output of dig(1) for a successful query
+
+```shell
+vagrant@lab1:/etc/bind$ dig ns1.insec @192.168.10.10
+
+; <<>> DiG 9.18.18-0ubuntu0.22.04.2-Ubuntu <<>> ns1.insec @192.168.10.10
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 50692
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: b410b27832e82b710100000065dd9acf90d64d85837825b0 (good)
+;; QUESTION SECTION:
+;ns1.insec.                     IN      A
+
+;; ANSWER SECTION:
+ns1.insec.              3600    IN      A       192.168.10.10
+
+;; Query time: 0 msec
+;; SERVER: 192.168.10.10#53(192.168.10.10) (UDP)
+;; WHEN: Tue Feb 27 08:18:23 UTC 2024
+;; MSG SIZE  rcvd: 82
+```
+
+### 3.3 How would you add an IPv6 address entry to a zone file?
+
+## 4. Create a slave server for `.insec`
+
+> Configure ns2 to work as a slave for .insec domain. Use a similar configuration as for the master, but don't create zone files.
+>
+> On the master server, add an entry (A, PTR and NS -records) for your slave server. Don't forget to increment the serial number for the zone. Also allow zone transfers to your slave.
+>
+> Reload configuration files in both machines and watch the logs. Verify that the zone files get transferred to the slave. Try to resolve machines in the .insec domain through both servers.
+
+### 4.2 Explain the changes you made
+
+#### Master server configuration
+
+In `/etc/bind/db.insec`, add
+
+```config
+@       IN      NS      ns2.insec.
+ns2     IN      A       192.168.10.11
+```
+
+In `/etc/bind/named.conf.local`, add
+
+```config
+zone "insec" {
+        type master;
+        file "/etc/bind/db.insec";
+        allow-transfer { 192.168.10.11; };
+};
+```
+
+`allow-transfer` will allow zone file transfer
+
+In `/etc/bind/db.10.168.192`, add
+
+```config
+11      IN      PTR     ns2.insec.
+```
+
+Always remember to increment the serial number in zone files after modifications.
+
+#### Slave server configuration
+
+In `/etc/bind/named.conf.local`, add zone definition
+
+```config
+zone "insec" {
+        type slave;
+        file "slaves/db.insec";
+        masters { 192.168.10.10; }; // IP of ns1
+};
+
+zone "10.168.192.in-addr.arpa" {
+        type slave;
+        file "slaves/db.10.168.192";
+        masters { 192.168.10.10; }; // IP of ns1
+};
+```
+
+Check configuration file syntax
+
+```shell
+sudo named-checkconf
+sudo named-checkzone insec /etc/bind/db.insec
+sudo named-checkzone c.b.a.in-addr.arpa /etc/bind/db.c.b.a
+```
+
+Restart the service
+
+```shell
+sudo systemctl reload bind9
+```
+
+### 4.1 Demonstrate the successful zone file transfer
+
+To achieve zone file transfer, the desination should be specify first.
+
+#### Go to slave server `/etc/bind/named.conf.options`
+
+The path at the top of the file is the destination path
+
+```config
+options {
+        directory "/var/cache/bind";
+        ...
+}
+```
+
+#### Go to slave server `/etc/bind/named.conf.local`
+
+See the zone definition file location, the path is relative to the path in `/etc/bind/named.conf.options`
+
+```config
+zone "insec" {
+        type slave;
+        file "slaves/db.insec";
+        masters { 192.168.10.10; }; // IP of ns1
+};
+```
+
+As a result, the zone file would be transferred to `/var/cache/bind/slaves/`
+
+In case there is no `/var/cache/bind/slaves/` folder, this file should be created.
+
+```shell
+sudo mkdir /var/cache/bind/slaves
+sudo chown bind:bind /var/cache/bind/slaves
+sudo chmod 775 /var/cache/bind/slaves
+```
+
+#### Verification
+Go to `/var/cache/bind/slaves/` to see if there are two zone files in this case.
+
+### Provide the output of dig(1) for a successful query from the slave server. Are there any differences to the queries from the master?
+
+```shell
+vagrant@lab2:/var/cache/bind/slaves$ dig ns2.insec @192.168.10.11
+
+; <<>> DiG 9.18.18-0ubuntu0.22.04.2-Ubuntu <<>> ns2.insec @192.168.10.11
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 11744
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 5ea136cb3e6ddf580100000065de15eb552f437f7d621c4b (good)
+;; QUESTION SECTION:
+;ns2.insec.                     IN      A
+
+;; ANSWER SECTION:
+ns2.insec.              86400   IN      A       192.168.10.11
+
+;; Query time: 0 msec
+;; SERVER: 192.168.10.11#53(192.168.10.11) (UDP)
+;; WHEN: Tue Feb 27 17:03:39 UTC 2024
+;; MSG SIZE  rcvd: 82
+```
+
+## 5. Create a subdomain .not.insec.
