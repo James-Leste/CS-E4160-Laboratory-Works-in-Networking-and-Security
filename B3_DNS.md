@@ -522,3 +522,124 @@ Use this to send a unauthenticated transfer
 ```shell
 dig @192.168.10.11 axfr not.insec
 ```
+
+### 6.3 TSIG is one way to implement transaction signatures. DNSSEC describes another, SIG(0). Explain the differences
+
+## 7. Pi-hole DNS sinkhole
+
+> Pi-hole is a specialized type of DNS server, a DNS sinkhole, which makes queries for certain domains fail. This could be used for example as a DNS level filter for blocking access to forbidden or malicious websites, or for blocking ads by not allowing computers to resolve the addresses of the ad servers.
+>
+> Install Pi-hole on ns1 and configure the client to use it as their DNS. Perform a dig(1) query to a non-blacklisted domain such as google.com. Then blacklist that domain on the Pi-hole and repeat the query. (The result should not be same for both runs.)
+
+### 7.1 Based on the dig-queries, how does Pi-hole block domains on a DNS level?
+
+```shell
+vagrant@lab4:~$ dig google.com
+
+; <<>> DiG 9.18.18-0ubuntu0.22.04.2-Ubuntu <<>> google.com
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 57401
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;google.com.                    IN      A
+
+;; ANSWER SECTION:
+google.com.             2       IN      A       0.0.0.0
+
+;; Query time: 3 msec
+;; SERVER: 192.168.10.10#53(192.168.10.10) (UDP)
+;; WHEN: Tue Feb 27 18:56:41 UTC 2024
+;; MSG SIZE  rcvd: 55
+```
+
+```shell
+vagrant@lab4:~$ dig google.com
+
+; <<>> DiG 9.18.18-0ubuntu0.22.04.2-Ubuntu <<>> google.com
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 23295
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;google.com.                    IN      A
+
+;; ANSWER SECTION:
+google.com.             222     IN      A       142.250.74.78
+
+;; Query time: 0 msec
+;; SERVER: 192.168.10.10#53(192.168.10.10) (UDP)
+;; WHEN: Tue Feb 27 19:00:51 UTC 2024
+;; MSG SIZE  rcvd: 55
+```
+
+### 7.2 How could you use Pi-hole in combination with your own DNS server, such as your caching-only nameserver?
+
+Using Pi-hole in combination with your own BIND9 caching-only DNS server involves configuring Pi-hole to forward DNS queries to your BIND9 server, and then setting your network devices to use Pi-hole as their primary DNS resolver. This way, Pi-hole will handle ad-blocking and privacy features, and any queries it doesn't block will be forwarded to your BIND9 server for resolution.
+
+#### Step 1: Configure Pi-hole to Use Your BIND9 Server as Upstream DNS
+
+1. **Access Pi-hole Server**: SSH into your Pi-hole server.
+
+2. **Configure Upstream DNS Server**: You need to tell Pi-hole to use your BIND9 server as its upstream DNS server. This can be done by editing Pi-hole's configuration file or through the Pi-hole admin interface, but here we'll focus on the command line approach.
+
+   - Open the Pi-hole configuration file. Depending on your Pi-hole version, this might be `/etc/pihole/setupVars.conf` or another file in the `/etc/pihole/` directory:
+
+     ```bash
+     sudo nano /etc/pihole/setupVars.conf
+     ```
+
+   - Find the lines that specify the upstream DNS servers, which might look something like `PIHOLE_DNS_1` and `PIHOLE_DNS_2`. Set one of them to your BIND9 server's IP address (192.168.10.10) and leave the other blank or remove it:
+
+    ```shell
+    PIHOLE_DNS_1=192.168.10.10
+    ```
+
+   - Save and close the file.
+
+3. **Apply Changes**: To apply the changes, you might need to restart Pi-hole's DNS service:
+
+   ```bash
+   pihole restartdns
+   ```
+
+#### Step 2: Configure Network Devices to Use Pi-hole as DNS Server
+
+For devices on your network to benefit from both Pi-hole's blocking capabilities and your BIND9 server's DNS resolution, configure them to use Pi-hole as their DNS server:
+
+- **Manually Set DNS**: On individual devices, manually set the DNS server to Pi-hole's IP address.
+
+- **Configure via DHCP**: On your network router or DHCP server, set the DNS option to Pi-hole's IP address so all DHCP clients use Pi-hole for DNS resolution by default.
+
+#### Step 3: Test the Configuration
+
+To ensure that the setup is working correctly:
+
+1. **Test DNS Blocking**: Try accessing a known ad-serving domain to see if Pi-hole blocks it. You can use `dig` or a web browser for this test.
+
+   ```bash
+   dig ads.example.com
+   ```
+
+   Replace `ads.example.com` with an actual ad-serving domain. You should see Pi-hole's IP address as the response, indicating that the query was blocked.
+
+2. **Test DNS Resolution**: Test a legitimate domain to ensure queries are being forwarded to your BIND9 server and resolved correctly.
+
+   ```bash
+   dig google.com
+   ```
+
+   You should see legitimate IP addresses in the response, indicating successful resolution by your BIND9 server.
+
+#### Considerations
+
+- **Port Conflicts**: Ensure Pi-hole and BIND9 are not both trying to bind to port 53 on the same IP address, as this will cause a conflict. Typically, Pi-hole and BIND9 would run on separate devices, or you would configure them to listen on different interfaces or IP addresses if they must coexist on the same device.
+- **Performance and Redundancy**: Consider the performance implications and ensure redundancy, especially if Pi-hole and BIND9 become critical points of failure in your network.
+
+By following these steps, you integrate Pi-hole's ad-blocking and privacy features with your BIND9 caching-only DNS server, leveraging the strengths of both systems for a more efficient and private network.
