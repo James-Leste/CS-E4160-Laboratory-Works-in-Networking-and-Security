@@ -293,8 +293,109 @@ second to lab3
 
 ### 4.1
 
+**On lab1 (IPv6 address: fd01:2345:6789:abc1::1/64, IPv4 address: 192.168.1.1):**
+
+1. Install the `sit` tunneling module (should be included with the kernel by default):
+   ```sh
+   sudo modprobe sit
+   ```
+
+2. Create the tunnel:
+   ```sh
+   sudo ip tunnel add tun6to4 mode sit remote 192.168.2.1 local 192.168.1.1 ttl 255
+   ```
+
+3. Bring the tunnel interface up:
+   ```sh
+   sudo ip link set tun6to4 up
+   ```
+
+4. Assign an IPv6 address to the tunnel interface:
+   ```sh
+   sudo ip -6 addr add 2001:db8:1::2/64 dev tun6to4
+   ```
+
+5. Add a route to lab4's IPv6 network via the tunnel interface:
+   ```sh
+   sudo ip -6 route add fd01:2345:6789:abc2::/64 via 2001:db8:1::2 dev tun6to4
+   ```
+
+6. Ensure that IPv6 forwarding is enabled:
+   ```sh
+   sudo sysctl -w net.ipv6.conf.all.forwarding=1
+   ```
+
+**On lab3 (IPv6 address: fd01:2345:6789:abc2::1/64, IPv4 address: 192.168.2.1):**
+
+Repeat the steps on lab1, but adjust the IP addresses accordingly:
+
+1. Install the `sit` tunneling module:
+   ```sh
+   sudo modprobe sit
+   ```
+
+2. Create the tunnel:
+   ```sh
+   sudo ip tunnel add tun6to4 mode sit remote 192.168.1.1 local 192.168.2.1 ttl 255
+   ```
+
+3. Bring the tunnel interface up:
+   ```sh
+   sudo ip link set tun6to4 up
+   ```
+
+4. Assign an IPv6 address to the tunnel interface:
+   ```sh
+   sudo ip -6 addr add 2001:db8:2::1/64 dev tun6to4
+   ```
+
+5. Add a route to lab2's IPv6 network via the tunnel interface:
+   ```sh
+   sudo ip -6 route add fd01:2345:6789:abc1::/64 via 2001:db8:2::1 dev tun6to4
+   ```
+
+6. Enable IPv6 forwarding:
+   ```sh
+   sudo sysctl -w net.ipv6.conf.all.forwarding=1
+   ```
+
+After these configurations are in place, you should be able to ping IPv6 hosts in lab4 from lab2 and vice versa, through the IPv4 network.
+
+Please ensure that these IP addresses do not conflict with other addresses in your network and adjust the tunnel endpoints' IPv4 addresses (`remote` and `local`) as well as the IPv6 addresses (`2001:db8:1::2` and `2001:db8:2::1`) to fit your actual network configuration. The IPv6 addresses I used for the tunnel endpoints are from the documentation range (2001:db8::/32) and should be replaced with actual unique global or unique local IPv6 addresses in your network.
+
+Moreover, ensure that any firewalls in the path allow IPv4 protocol 41 (6in4) which is used for the encapsulation.
+
 ### 4.2
 
 ### 4.3
 
+Simplicity: 6in4 tunneling is relatively straightforward to set up and requires minimal configuration. It's supported out-of-the-box by many operating systems, including Ubuntu, which you are using.
+
+No Need for Third-Party Services: Unlike 6to4 and Teredo, 6in4 doesn't rely on any third-party infrastructure or internet-based tunnel brokers. It's a point-to-point setup between lab1 and lab3, which you have direct control over.
+
+Controlled Environment: Since you are operating within a lab environment, you likely have control over both ends of the tunnel. This makes manual configuration feasible and preferable over automatic methods that are designed to traverse complex, multi-hop, public internet paths.
+
+Network Topology: Based on your diagram, lab1 and lab3 act as border gateways for lab2 and lab4, respectively. A 6in4 tunnel is a suitable choice for connecting two IPv6 islands over an IPv4 "sea" without altering the existing network infrastructure.
+
+IPv4 Intermediary: You mentioned that the intermediary network only supports IPv4. 6in4 tunneling is specifically designed to encapsulate IPv6 traffic within IPv4 packets, making it ideal for this scenario.
+
+Performance: Since 6in4 tunnels are statically configured, they often have better performance compared to dynamic tunneling solutions that may introduce additional latency or overhead.
+
+Compatibility: 6in4 tunneling has wide compatibility and is a well-understood, standardized technique that can be implemented on a variety of network equipment and operating systems.
+
+Scalability and Security: While 6in4 doesn't inherently include encryption, it allows for the implementation of security measures such as IPsec. It's also more scalable within a controlled environment compared to automatic tunneling methods that are not as predictable.
+
 ### 4.4
+
+Unencrypted Traffic: The 6in4 tunneling does not encrypt the encapsulated traffic by default. This means that the IPv6 traffic going through the IPv4 network can be intercepted and read by anyone who has access to the transit path.
+
+Solution: Use IPsec or another encryption method to secure the traffic within the tunnel. Configuring IPsec would involve setting up a Security Association (SA) between lab1 and lab3 and ensuring that both IPv6 and IPv4 traffic is encrypted and authenticated.
+Spoofing Attacks: Since 6in4 tunneling does not inherently provide authentication, it's possible for an attacker to send packets with a spoofed source address, potentially causing traffic redirection or other attacks.
+
+Solution: Implement strict ingress and egress filtering rules to ensure that only traffic from known IP addresses can enter or exit the tunnel endpoint. Also, IPsec can provide authentication to mitigate spoofing.
+Lack of Path MTU Discovery: Tunneling can cause issues with MTU discovery, as the encapsulated packets may be larger than the MTU of the IPv4 path, leading to fragmentation or dropped packets.
+
+Solution: Configure the tunnel endpoints to use a reduced MTU value to prevent fragmentation or implement PMTUD (Path MTU Discovery) for the tunnel interface.
+Denial of Service (DoS) Attacks: Tunnels can be a target for DoS attacks, as they provide a single point of failure. An attacker could flood the tunnel with traffic, overwhelming the resources of the tunnel endpoint.
+
+Solution: Implement rate limiting and traffic shaping on the tunnel interface to control the bandwidth usage. Also, having redundant tunnels and load balancing could mitigate the impact of DoS attacks.
