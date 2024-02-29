@@ -119,4 +119,175 @@ run on lab1, use lab2 to ping lab1 and lab3, and observe the terminal
 sudo tcpdump -i enp0s8 icmp6
 ```
 
-## 3. 
+## 3. IPv6 Router Advertisement Daemon
+
+> Instead of having to manually assign the addresses to the interfaces, this can be done by the router, so they automatically get an address assigned to them.
+>
+> Set up Router Advertisement Daemon on lab1 to automatically assign IPv6 addresses to VMs connected to intnet1 and intnet2.
+>
+> - On lab2 and lab3: Remove all static addresses from the intnet interfaces and run the interfaces down.
+> - lab1: Install IPv6 Router Advertisement Daemon (radvd). Modify the content of radvd.conf file to be used in your network (If radvd.conf file does not exist create one under /etc directory). Radvd should advertise prefix fd01:2345:6789:abc1::/64 on intnet1 (enp0s8) and fd01:2345:6789:abc2::/64 on intnet2 (enp0s9). Start the router advertisement daemon (radvd).
+> - Check using tcpdump that router advertisement packets are sent to enp0s8 and enp0s9 of lab1 periodically. If you can’t see any packets sent, edit the conf file.
+> - Start tcpdump on lab2 and capture ICMPv6 packets. Bring the interfaces on lab2 and lab3 up. Stop capturing packets after receiving first few ICMPv6 packets. Make sure the addresses that are assigned to the interfaces are received from the router advertisement.
+> - Ping lab3 from lab2 using the IPv6 address allocated by radvd. You should get a return packet for each ping you have sent. If not, recheck your network configuration.
+
+On `lab2` and `lab3`:
+
+Remove all static IPv6 addresses from the interfaces.
+
+```bash
+sudo ip -6 addr flush dev enp0s8
+```
+
+Bring the interfaces down.
+
+```bash
+sudo ip link set enp0s8 down
+```
+
+On `lab1`:
+
+Install `radvd` if it's not already installed.
+
+```bash
+sudo apt update
+sudo apt install radvd
+```
+
+Create or edit the `radvd.conf` file located in the `/etc` directory.
+
+```bash
+sudo nano /etc/radvd.conf
+```
+
+Insert the following configuration into the `radvd.conf` file:
+
+```plaintext
+interface enp0s8 {
+    AdvSendAdvert on;
+    prefix fd01:2345:6789:abc1::/64 {
+        AdvOnLink on;
+        AdvAutonomous on;
+        AdvRouterAddr on;
+    };
+};
+
+interface enp0s9 {
+    AdvSendAdvert on;
+    prefix fd01:2345:6789:abc2::/64 {
+        AdvOnLink on;
+        AdvAutonomous on;
+        AdvRouterAddr on;
+    };
+};
+```
+
+Start the `radvd` service.
+
+```bash
+sudo systemctl start radvd
+```
+
+Confirm that `radvd` is running and sending router advertisements.
+
+```bash
+sudo tcpdump -i enp0s8 -vv icmp6
+sudo tcpdump -i enp0s9 -vv icmp6
+```
+
+On `lab2` and `lab3`:
+
+Bring the interfaces back up.
+
+```bash
+sudo ip link set enp0s8 up
+```
+
+Start capturing ICMPv6 packets with `tcpdump`.
+
+```bash
+sudo tcpdump -i enp0s8 -vv icmp6
+```
+
+Wait to receive the router advertisements and confirm that an IPv6 address within the advertised prefix is assigned to the interface.
+
+### 3.1 Explain your modifications to radvd.conf. Which options are mandatory?
+
+- `AdvSendAdvert on;` (mandatory): This option enables the sending of router advertisements on the specified interface. When set to on, radvd will periodically send out router advertisement messages, which are used by clients to configure their IPv6 addresses and other settings.
+- `AdvOnLink on;` (Common): This option indicates that the advertised prefix is on-link, meaning that addresses within this prefix are directly reachable on the attached link (network segment). It tells the client that hosts on this prefix are reachable without going through a router.
+- `AdvAutonomous on;` (Common): This option enables Stateless Address Autoconfiguration (SLAAC) for the prefix. It allows clients to automatically configure their own IPv6 addresses using the advertised prefix combined with their interface identifier (derived from the MAC address or generated through privacy extensions).
+- `AdvRouterAddr on;` (Optional): This option indicates that the address of the interface from which the advertisement is sent should be used as the default router address for the advertised prefix. However, this option is not typically used in radvd configurations and is not part of the standard Router Advertisement specification. In most cases, the router's address is inferred by clients from the source address of the received advertisement.
+
+### 3.2 Analyze captured packets and explain what happens when you set up the interface on lab2
+
+The provided `tcpdump` output captures an IPv6 Router Advertisement (RA) packet sent from `tlab1` to the `ip6-allnodes` multicast address, which is a special IPv6 address that all IPv6-enabled devices on the local network segment listen to.
+
+- **Source and Destination**: The packet is from `tlab1` and is sent to `ip6-allnodes`, indicating it's a Router Advertisement meant for all IPv6 nodes on the local network.
+
+- **ICMPv6 Router Advertisement**: The packet is an ICMPv6 message with a type indicating it's a Router Advertisement. RAs are used by routers to advertise their presence along with various IPv6 network parameters.
+
+- **Hop Limit**: Set to 64, which is a common default value for the hop limit in IPv6 packets.
+
+- **Flags**: The RA contains flags that are set to `[none]`, indicating no specific flags are set. Commonly used flags in RAs include the Managed Address Configuration (M) and Other Configuration (O) flags, but neither is set here.
+
+- **Router Lifetime**: Set to 1800 seconds (30 minutes), indicating how long the receiver should consider this router as a default router.
+
+- **Reachable Time and Retrans Timer**: Both are set to 0ms, indicating that the sender has not specified particular values for these parameters. The reachable time specifies how long a neighbor is considered reachable after a reachability confirmation event, and the retrans timer specifies the time between retransmitted Neighbor Solicitation messages.
+
+- **Prefix Info Option**: This part of the RA specifies the IPv6 prefix that is being advertised (`fd01:2345:6789:abc1::/64`) for automatic address configuration. The flags within this option (`onlink`, `auto`, `router`) indicate that the prefix is on-link, addresses within the prefix can be auto-configured, and the sender is a router. The valid time is set to 86400 seconds (1 day), and the preferred time is set to 14400 seconds (4 hours).
+
+- **Source Link-Address Option**: Contains the link-layer address of the sender (`08:00:27:28:20:7c`). This is used by receiving nodes to update their Neighbor Discovery cache with the link-layer address of the router.
+
+**What Happens on `lab2` Upon Setup**:
+
+When the interface on `lab2` is set up and it receives this Router Advertisement:
+
+1. **Router Discovery**: `lab2` learns about the presence of a router (`tlab1`) on its network segment.
+
+2. **Prefix Information**: `lab2` receives the prefix `fd01:2345:6789:abc1::/64` and understands that it can auto-configure an IPv6 address within this prefix using SLAAC (Stateless Address Autoconfiguration).
+
+3. **Address Configuration**: Based on the prefix information in the RA, `lab2` will generate an IPv6 address for its interface. This is typically done by appending the interface's EUI-64 (an identifier derived from the MAC address) to the prefix, or by using a privacy extension if configured.
+
+4. **Router as Default Gateway**: The Router Lifetime value tells `lab2` that it can use `tlab1` as a default gateway for a specified time (1800 seconds in this case).
+
+5. **Neighbor Cache Update**: The source link-layer address option allows `lab2` to update its Neighbor Cache with the MAC address of `tlab1`, facilitating layer 2 communications.
+
+After these steps, `lab2` will have an IPv6 address within the advertised prefix and will be able to communicate with other IPv6 nodes on the network and beyond, using `tlab1` as its default gateway.
+
+### 3.3 How is the host-specific part of the address determined in this case?
+
+Stateless Address Autoconfiguration (SLAAC).
+
+EUI-64 Method: This is a common method where the interface identifier is derived from the network interface's MAC (Media Access Control) address. The MAC address is 48 bits, and to convert it to a 64-bit EUI-64 format, the MAC address is split in half, the hexadecimal value 0xFFFE is inserted in the middle, and the Universal/Local (U/L) bit (the 7th bit of the first byte) is flipped. This process generates a unique 64-bit identifier for the interface.
+
+### 3.4 Show and explain the output of a traceroute(1) from lab2 to lab3
+
+```plaintext
+vagrant@tlab2:~$ traceroute fd01:2345:6789:abc2:a00:27ff:feb2:f6c0
+traceroute to fd01:2345:6789:abc2:a00:27ff:feb2:f6c0 (fd01:2345:6789:abc2:a00:27ff:feb2:f6c0), 30 hops max, 80 byte packets
+ 1  fd01:2345:6789:abc1:a00:27ff:fe28:207c (fd01:2345:6789:abc1:a00:27ff:fe28:207c)  0.783 ms  0.429 ms  0.852 ms
+ 2  fd01:2345:6789:abc2:a00:27ff:feb2:f6c0 (fd01:2345:6789:abc2:a00:27ff:feb2:f6c0)  1.519 ms  1.251 ms  1.416 ms
+```
+
+2 hops
+
+first to lab1 as a router
+second to lab3
+
+## 4. Configure IPv6 over IPv4
+
+> Ideally, IPv6 should be run natively wherever possible, with IPv6 devices communicating with each other directly over IPv6 networks. However, the move from IPv4 to IPv6 will happen over time. The Internet Engineering Task Force (IETF) has developed several transition techniques to accommodate a variety of IPv4-to-IPv6 scenarios. One type of IPv4–to–IPv6 transition mechanism is translation including NAT64, Mapping of Address and Port (MAP), IPv6 Rapid Deployment (6rd), etc.
+>
+> In this part of the assignment the goal is to demonstrate two ipv6 only nodes communicating with each other and the global internet through an ipv4 link. You will need to spin up another VM, lab4 for this part of the assignment to setup the network shown below, which has two IPv6 only nodes and two nodes with both IPv6 and IPv4 capabilities but only an IPv4 link connecting them to each other
+>
+> 1. Reset the networking on lab1, lab2 and lab3 back to default.
+>
+> 2. Create a new VM named lab4. Lab4 should have a NAT adapter for you to be able to ssh into and administer it, so set up port forwarding accordingly
+>
+> 3. On lab3 and lab4, add a network adapter of type internal network and name it intnet3
+>
+> 4. On lab2 and lab4, disable all static IPv4 addresses on the intent adapters. Create an IPv6 link between lab2 and lab1 assigning static addresses from the fd01:2345:6789:abc1::/64 subnet, similarly create an IPv6 link between lab3 and lab4 assigning addresses from the subnet fd01:2345:6789:abc2::/64.
+>
+> 5. Between lab1 and lab3 setup an IPv4 link with static addresses from 192.168.0.0/16
+> 6. Make sure only lab3 has internet access. Configure your routing so that lab3 is used as the internet gateway
+
