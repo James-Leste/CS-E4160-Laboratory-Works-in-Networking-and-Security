@@ -249,6 +249,12 @@ ns1.insec.              3600    IN      A       192.168.10.10
 
 ### 3.3 How would you add an IPv6 address entry to a zone file?
 
+To add an IPv6 address entry to a DNS zone file in BIND9, you use the AAAA record type. The AAAA record maps a hostname to a 128-bit IPv6 address, similar to how the A record maps a hostname to a 32-bit IPv4 address.
+
+```shell
+hostname IN AAAA 2001:db8::1
+```
+
 ## 4. Create a slave server for `.insec`
 
 > Configure ns2 to work as a slave for .insec domain. Use a similar configuration as for the master, but don't create zone files.
@@ -523,7 +529,11 @@ Use this to send a unauthenticated transfer
 dig @192.168.10.11 axfr not.insec
 ```
 
-### 6.3 TSIG is one way to implement transaction signatures. DNSSEC describes another, SIG(0). Explain the differences
+### 6.2 TSIG is one way to implement transaction signatures. DNSSEC describes another, SIG(0). Explain the differences
+
+- Security Model: TSIG relies on a shared secret key known only to the parties involved, suitable for closed environments like between known DNS servers. SIG(0) uses public key cryptography, which fits scenarios where such direct pre-shared key arrangements are impractical.
+- Use Cases: TSIG is broadly used for a variety of DNS transactions, including zone transfers and dynamic updates, across a wide range of DNS server implementations. SIG(0) is specifically used within the context of DNSSEC for securing dynamic updates.
+- Cryptography: TSIG uses symmetric key cryptography, whereas SIG(0) uses asymmetric cryptography, aligning with the public-private key model of DNSSEC.
 
 ## 7. Pi-hole DNS sinkhole
 

@@ -291,3 +291,10 @@ second to lab3
 > 5. Between lab1 and lab3 setup an IPv4 link with static addresses from 192.168.0.0/16
 > 6. Make sure only lab3 has internet access. Configure your routing so that lab3 is used as the internet gateway
 
+### 4.1
+
+### 4.2
+
+### 4.3
+
+### 4.4
