@@ -63,6 +63,55 @@ cat test.txt
 
 To see if the test.txt has the exact same content as lab1
 
+## 3. Configuring and testing samba
 
+On lab1 install `samba`
+
+```shell
+sudo apt install samba
+```
+
+Configure /etc/samba/smb.conf, add following configuration at the bottom.
+
+```text
+[home]
+    path=/home
+    browseable = yes
+    read only = no
+    writable = yes
+    valid users = testuser1
+```
+
+Save the file, restart the service and turn off firewall
+
+```shell
+sudo service smbd restart
+sudo service smbd status
+sudo ufw allow samba
+```
+
+add a user to samba and set a password
+
+```shell
+sudo smbpasswd -a testuser1
+```
+
+On lab2 install smbclient
+
+```shell
+sudo apt install samba-client
+```
+
+check if you can access to the lab1 shared folder using samba client
+
+```shell
+smbclient //lab1/home -U testuser1
+```
+
+If the test is successful, mount the target folder, and check mnt folder.
+
+```shell
+sudo mount -t cifs -o username=testuser1 //lab1/home/testuser1 /mnt
+```
 
 
