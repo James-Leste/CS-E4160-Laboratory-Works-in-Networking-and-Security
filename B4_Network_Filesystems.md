@@ -171,7 +171,7 @@ testuser1@lab1:/home/testuser1 on /home/testuser1/mnt type fuse.sshfs (rw,nosuid
 >
 > Create a directory /var/www/WebDAV for storing WebDAV related files and add subdirectory files to be shared using WebDAV. Change the owner of the directories created to www-data (Apache's user ID) and the group to your user ID. Change the permissions if needed.
 >
-> Create an alias to the virtual host file (/etc/apache2/sites-available/000-default.conf) so that /var/www/WebDAV/files can be reached through http://localhost/webdav. Enable the virtual host by creating a symbolic link between /etc/apache2/sites-available/000-default.conf and /etc/apache2/sites-enabled/.
+> Create an alias to the virtual host file (/etc/apache2/sites-available/000-default.conf) so that /var/www/WebDAV/files can be reached through <http://localhost/webdav>. Enable the virtual host by creating a symbolic link between /etc/apache2/sites-available/000-default.conf and /etc/apache2/sites-enabled/.
 >
 > Restart apache2 and check that you can reach the server with, for example, elinks(1).
 >
@@ -189,8 +189,7 @@ testuser1@lab1:/home/testuser1 on /home/testuser1/mnt type fuse.sshfs (rw,nosuid
 > </Location>
 > ```
 >
-> Restart Apache2 and test the server from another machine using cadaver(1). You should reach the server http://lab1/webdav.
-
+> Restart Apache2 and test the server from another machine using cadaver(1). You should reach the server <http://lab1/webdav>.
 
 Install Apache2 on lab1
 
