@@ -310,6 +310,45 @@ mount
 sudo mount -t davfs http://lab1/webdav /mnt/webdav
 ```
 
+### 5.3 Does this method support versioning? If not, what should be added?
+
+**Install Subversion:**
+You'll need to install the Subversion packages on your server. You can do this on a Debian-based system (like Ubuntu) using the following command
+
+```shell
+sudo apt-get install subversion libapache2-mod-svn libsvn-dev
+```
+
+**Create a Subversion Repository:**
+You'll need to create a new SVN repository, which will store your versioned files. You can do this with the `svnadmin` command:
+
+```bash
+sudo svnadmin create /path/to/your/repository
+```
+
+**Configure Apache to Serve the SVN Repository:**
+You'll need to edit your Apache configuration to serve the SVN repository. This typically involves adding a new `<Location>` block to your Apache configuration file (e.g., `/etc/apache2/sites-available/000-default.conf`) that specifies the path to your SVN repository and enables the `dav_svn` module:
+
+```apache
+<Location /svn>
+    DAV svn
+    SVNPath /path/to/your/repository
+    AuthType Basic
+    AuthName "Subversion Repository"
+    AuthUserFile /etc/apache2/svn.password
+    Require valid-user
+</Location>
+```
+
+**Create Users:**
+Similar to your WebDAV setup, you'll need to create a user file for authentication. You can use `htpasswd` to create this file:
+
+```bash
+sudo htpasswd -c /etc/apache2/svn.password username
+```
+
+**Restart Apache:**
+
 ## 6. Raid 5
 
 > In this task, you are going to establish a Network Attached Storage (NAS) system with lab1 as a server. The server should use Raid for data integrity. Set up Raid 5 on the NAT server and create EXT4 filesystem on the array.
@@ -380,3 +419,31 @@ On lab2, mount //lab1/mnt/md0 to a directory
 ```shell
 sudo mount -t nfs lab1:/mnt/md0 mnt
 ```
+
+## 7. Comparison
+
+### 7.1 Describe briefly a few use cases for samba, nfs, sshfs and WebDAV. Where, why, weaknesses?
+
+**Samba:**
+
+- **Use Cases:** Samba is often used to facilitate file sharing between Windows and UNIX/Linux systems. It allows Linux systems to act as file and print servers in a Windows network environment. Common use cases include sharing files across different operating systems, setting up network printers, and serving as a domain controller.
+- **Why:** Samba is compatible with the SMB/CIFS protocol, which is native to Windows operating systems, making it ideal for mixed-OS environments.
+- **Weaknesses:** Configuration can be complex and may require understanding of both Windows and Linux permissions and networking. Security depends on proper configuration and maintenance.
+
+**NFS (Network File System):**
+
+- **Use Cases:** NFS is widely used in UNIX/Linux environments to share files and directories over a network. It is commonly used in enterprise environments, data centers, and for shared storage solutions where performance and simplicity are critical.
+- **Why:** NFS allows for easy sharing of files across a network with minimal setup, making it convenient for environments where UNIX/Linux systems are prevalent.
+- **Weaknesses:** NFS traditionally has weaker security features, relying on network security. NFSv4 improves on this with stronger security features but is not universally adopted. Performance can be an issue over slow or unreliable networks.
+
+**SSHFS (SSH Filesystem):**
+
+- **Use Cases:** SSHFS is used to mount remote file systems over SSH. It's commonly used for securely accessing remote files without needing to set up more complex file sharing services. Ideal for individual users needing secure access to remote files.
+- **Why:** SSHFS is simple to set up and leverages the security of SSH, making it a good option for secure, temporary, or ad-hoc file sharing needs.
+- **Weaknesses:** Performance might not be as good as other file-sharing protocols, especially over high-latency networks. It's more suitable for individual use than for serving large numbers of users or applications.
+
+**WebDAV (Web-based Distributed Authoring and Versioning):**
+
+- **Use Cases:** WebDAV is used for accessing, editing, and sharing files over the web. It's often employed by content management systems, for online document collaboration, and in scenarios where web-based access to files is needed.
+- **Why:** WebDAV extends HTTP, making it compatible with a wide range of devices and systems. It supports locking and versioning, which is useful for collaborative work.
+- **Weaknesses:** Setup and configuration can be more complex compared to other solutions, especially when advanced features like versioning are used. Performance and security can vary based on the underlying web server configuration.
