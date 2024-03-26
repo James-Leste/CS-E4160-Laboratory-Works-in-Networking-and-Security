@@ -318,3 +318,5 @@ Create a encrypted volume
 ### 5.3 What is plausible deniability
 
 Plausible deniability in the context of encrypted volumes, particularly with technologies like VeraCrypt, refers to the ability to deny the existence of encrypted data convincingly. This concept is crucial for protecting sensitive information even under duress, such as when someone is forced to reveal their encryption keys.
+
+veracrypt -t volume /mnt/veracrypthidden/
