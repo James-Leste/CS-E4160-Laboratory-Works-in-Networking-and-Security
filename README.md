@@ -2,7 +2,7 @@
 
 - A1 & B1: Setting up and Networking tools
 
-## Networking Part
+## Security Part
 
 ### A2_Email_Server
 
@@ -28,7 +28,7 @@
 
 [Link](https://github.com/James-Leste/CS-E4160-Laboratory-Works-in-Networking-and-Security/blob/main/A5_Firewall.md)
 
-## Security Part
+## Networking Part
 
 ### B2_Web_Server
 
